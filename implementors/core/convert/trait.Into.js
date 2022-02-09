@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["unicode_bidi"] = [{"text":"impl Into&lt;u8&gt; for <a class=\"struct\" href=\"unicode_bidi/level/struct.Level.html\" title=\"struct unicode_bidi::level::Level\">Level</a>","synthetic":false,"types":["unicode_bidi::level::Level"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
