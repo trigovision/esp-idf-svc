@@ -124,9 +124,7 @@ impl Storage for EspNvsStorage {
         let c_key = CString::new(key.as_ref()).unwrap();
         let mut len: size_t = 0;
 
-        match unsafe { nvs_get_blob(self.1, c_key.as_ptr(), ptr::null_mut(), &mut len as *mut _) }
-            as u32
-        {
+        match unsafe { nvs_get_blob(self.1, c_key.as_ptr(), ptr::null_mut(), &mut len as *mut _) } {
             ESP_ERR_NVS_NOT_FOUND => Ok(None),
             err => {
                 // bail on error
