@@ -122,57 +122,29 @@ impl Storage for EspNvsStorage {
 
     fn get_raw(&self, key: impl AsRef<str>) -> Result<Option<vec::Vec<u8>>, Self::Error> {
         let c_key = CString::new(key.as_ref()).unwrap();
+        let mut len: size_t = 0;
 
-        let mut value: u_int64_t = 0;
-
-        // check for u64 value
-        match unsafe { nvs_get_u64(self.1, c_key.as_ptr(), &mut value as *mut _) } {
-            ESP_ERR_NVS_NOT_FOUND => {
-                // check for blob value, by getting blob length
-                let mut len: size_t = 0;
-                match unsafe {
-                    nvs_get_blob(self.1, c_key.as_ptr(), ptr::null_mut(), &mut len as *mut _)
-                } {
-                    ESP_ERR_NVS_NOT_FOUND => Ok(None),
-                    err => {
-                        // bail on error
-                        esp!(err)?;
-
-                        // fetch value if no error
-                        let mut vec: vec::Vec<u8> = vec::Vec::with_capacity(len as usize);
-                        esp!(unsafe {
-                            nvs_get_blob(
-                                self.1,
-                                c_key.as_ptr(),
-                                vec.as_mut_ptr() as *mut _,
-                                &mut len as *mut _,
-                            )
-                        })?;
-
-                        unsafe { vec.set_len(len as usize) };
-                        Ok(Some(vec))
-                    }
-                }
-            }
+        match unsafe { nvs_get_blob(self.1, c_key.as_ptr(), ptr::null_mut(), &mut len as *mut _) }
+            as u32
+        {
+            ESP_ERR_NVS_NOT_FOUND => Ok(None),
             err => {
                 // bail on error
                 esp!(err)?;
 
-                // u64 value was found, decode it
-                let len: u8 = (value & 0xff) as u8;
-                value >>= 8;
+                // fetch value if no error
+                let mut vec: vec::Vec<u8> = vec::Vec::with_capacity(len as usize);
+                esp!(unsafe {
+                    nvs_get_blob(
+                        self.1,
+                        c_key.as_ptr(),
+                        vec.as_mut_ptr() as *mut _,
+                        &mut len as *mut _,
+                    )
+                })?;
 
-                let array: [u8; 7] = [
-                    (value & 0xff) as u8,
-                    ((value >> 8) & 0xff) as u8,
-                    ((value >> 16) & 0xff) as u8,
-                    ((value >> 24) & 0xff) as u8,
-                    ((value >> 32) & 0xff) as u8,
-                    ((value >> 48) & 0xff) as u8,
-                    ((value >> 56) & 0xff) as u8,
-                ];
-
-                Ok(Some(array[..len as usize].to_vec()))
+                unsafe { vec.set_len(len as usize) };
+                Ok(Some(vec))
             }
         }
     }
@@ -184,31 +156,18 @@ impl Storage for EspNvsStorage {
     ) -> Result<bool, Self::Error> {
         let c_key = CString::new(key.as_ref()).unwrap();
         let mut value = value.into();
-        let mut uvalue: u_int64_t = 0;
 
         // start by just clearing this key
         unsafe { nvs_erase_key(self.1, c_key.as_ptr()) };
 
-        if value.len() < 8 {
-            for v in value.iter().rev() {
-                uvalue <<= 8;
-                uvalue |= *v as u_int64_t;
-            }
-
-            uvalue <<= 8;
-            uvalue |= value.len() as u_int64_t;
-
-            esp!(unsafe { nvs_set_u64(self.1, c_key.as_ptr(), uvalue) })?;
-        } else {
-            esp!(unsafe {
-                nvs_set_blob(
-                    self.1,
-                    c_key.as_ptr(),
-                    value.as_mut_ptr() as *mut _,
-                    value.len() as u32,
-                )
-            })?;
-        }
+        esp!(unsafe {
+            nvs_set_blob(
+                self.1,
+                c_key.as_ptr(),
+                value.as_mut_ptr() as *mut _,
+                value.len() as u32,
+            )
+        })?;
 
         esp!(unsafe { nvs_commit(self.1) })?;
 
