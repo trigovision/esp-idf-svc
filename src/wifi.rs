@@ -310,6 +310,12 @@ impl EspWifi {
                 Option::Some(Self::event_handler),
                 shared_ref as *mut c_types::c_void
             ))?;
+            esp!(esp_event_handler_register(
+                SC_EVENT,
+                ESP_EVENT_ANY_ID,
+                Option::Some(Self::event_handler),
+                shared_ref as *mut c_types::c_void
+            ))?;
 
             info!("Event handlers registered");
         }
@@ -593,6 +599,11 @@ impl EspWifi {
             ))?;
             esp!(esp_event_handler_unregister(
                 IP_EVENT,
+                ESP_EVENT_ANY_ID as i32,
+                Option::Some(Self::event_handler)
+            ))?;
+            esp!(esp_event_handler_unregister(
+                SC_EVENT,
                 ESP_EVENT_ANY_ID as i32,
                 Option::Some(Self::event_handler)
             ))?;
