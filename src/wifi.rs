@@ -366,7 +366,10 @@ impl EspWifi {
     }
 
     fn set_client_conf(&mut self, conf: &ClientConfiguration) -> Result<(), EspError> {
-        info!("Setting STA configuration: {:?}", conf);
+        info!(
+            "Setting STA configuration: {}",
+            print_client_config_without_password(conf)
+        );
 
         let mut wifi_config = wifi_config_t {
             sta: Newtype::<wifi_sta_config_t>::from(conf).0,
@@ -725,13 +728,14 @@ impl EspWifi {
                     })?;
 
                     let cfg = smartconfig_start_config_t {
-                        enable_log: true,
+                        enable_log: false,
                         esp_touch_v2_enable_crypt: true,
                         esp_touch_v2_key: key.as_ptr() as _,
                     };
 
                     shared.smart_config_status = SmartConfigStatus::Running;
 
+                    info!("Starting smartconfig");
                     esp!(unsafe { esp_smartconfig_start(&cfg) })?;
                 } else {
                     shared.status.0 = Self::reconnect_if_operating(shared.operating)?;
@@ -875,8 +879,6 @@ impl EspWifi {
         event_id: c_types::c_int,
         event_data: *mut c_types::c_void,
     ) -> Result<bool, EspError> {
-        info!("Got smartconfig event: {} ", event_id);
-
         let handled = match event_id as u32 {
             smartconfig_event_t_SC_EVENT_SCAN_DONE => {
                 log::info!("Smartconfig scan done");
@@ -1101,7 +1103,10 @@ impl Wifi for EspWifi {
     }
 
     fn set_configuration(&mut self, conf: &Configuration) -> Result<(), Self::Error> {
-        info!("Setting configuration: {:?}", conf);
+        info!(
+            "Setting configuration: {}",
+            print_config_without_password(conf)
+        );
 
         self.stop()?;
 
@@ -1144,4 +1149,19 @@ impl Wifi for EspWifi {
 
         Ok(())
     }
+}
+
+fn print_config_without_password(config: &Configuration) -> String {
+    match config {
+        Configuration::None => format!("{config:?}"),
+        Configuration::Client(client) => print_client_config_without_password(client),
+        Configuration::AccessPoint(ap) => format!("{ap:?}"),
+        Configuration::Mixed(client, ap) => {
+            format!("({}, {ap:?})", print_client_config_without_password(client))
+        }
+    }
+}
+
+fn print_client_config_without_password(config: &ClientConfiguration) -> String {
+    format!("Client(ClientConfiguration {{ ssid: {:?}, bssid: {:?}, auth_method: {:?}, channel: {:?}, ip_conf: {:?} }})", config.ssid, config.bssid, config.auth_method, config.channel, config.ip_conf)
 }
