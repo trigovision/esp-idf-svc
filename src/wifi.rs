@@ -535,7 +535,7 @@ impl EspWifi {
             info!("Start requested");
 
             let result =
-                self.wait_status_with_timeout(Duration::from_secs(10), |s| !s.is_transitional());
+                self.wait_status_with_timeout(Duration::from_secs(60), |s| !s.is_transitional());
 
             if result.is_err() {
                 info!("Timeout while waiting for the requested state");
