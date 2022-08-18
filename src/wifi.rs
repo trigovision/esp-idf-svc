@@ -994,6 +994,10 @@ impl EspWifi {
             Ok(res.1)
         }
     }
+
+    pub fn disable(&mut self) -> Result<(), EspError> {
+        self.stop()
+    }
 }
 
 impl Drop for EspWifi {
