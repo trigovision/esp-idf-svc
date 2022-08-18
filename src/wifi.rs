@@ -995,12 +995,15 @@ impl EspWifi {
         }
     }
 
-    pub fn prep_scan(&mut self) -> Result<(), Error> {
-        if let Some(wifi) = self.wifi.as_mut() {
-            wifi.0.prep_scan().map_err(Error::Esp)
-        } else {
-            Err(Error::Destroyed)
+    pub fn prep_scan(&mut self) -> Result<(), EspError> {
+        self.stop();
+
+        unsafe {
+            esp!(esp_wifi_set_mode(wifi_mode_t_WIFI_MODE_STA))?;
+            esp!(esp_wifi_start())?;
         }
+
+        Ok(())
     }
 }
 
